@@ -2,24 +2,27 @@
 #include<stdio.h>
 #include<ncurses.h>
 
+static void setMode();
 static void endProgram();
 static void updateMenu(int val);
 static void displayMenu();
 static void displayPlayer();
 
+struct winsize w;
 unsigned short centerX, centerY;
-const int TITLEOFFSETX = 11;
-const int TITLEOFFSETY = 6;
-const int QUITCUTOFFSETX = 7;
-const int QUITCUTOFFSETY = 2;
-const int VERSIONOFFSETX = 6;
-const int VERSIONOFFSETY = 3;
+unsigned short y, x;
+const int TITLEOFFSETX     = 11;
+const int TITLEOFFSETY     = 6;
+const int QUITCUTOFFSETX   = 7;
+const int QUITCUTOFFSETY   = 2;
+const int VERSIONOFFSETX   = 6;
+const int VERSIONOFFSETY   = 3;
 const int PLAYERCUTOFFSETX = 11;
 const int PLAYERCUTOFFSETY = 3;
-char titleText[] = "Welcome to Musicritty!";
-char quitShortcutText[] = "<S-q> to quit";
-char versionText[] = "vers. 0.0.1";
-char playerShortcutText[] = "<S-e> to enter player";
+const char titleText[]          = "Welcome to Musicritty!";
+const char quitShortcutText[]   = "<S-q> to quit";
+const char versionText[]        = "vers. 0.0.1";
+const char playerShortcutText[] = "<S-e> to enter player";
 
 typedef enum {
   BACK = 81,				         // Shift + q
@@ -32,11 +35,10 @@ typedef enum {
   PLAYER
 } modes;
 
-int main(int** argc, char argv[]) {
-  struct winsize w;
+modes currentMode;
 
+int main(int** argc, char argv[]) {
   int ch;
-  modes currentMode;
   
   ioctl(0, TIOCGWINSZ, &w);
 
@@ -57,7 +59,6 @@ int main(int** argc, char argv[]) {
   
   //attron(COLOR_PAIR(1));
 
-  unsigned short y, x;
   getmaxyx(stdscr, y, x);
   centerX = ((w.ws_col / 2));
   centerY = ((w.ws_row / 2));
@@ -73,7 +74,6 @@ int main(int** argc, char argv[]) {
       case CONTINUE:
         currentMode++;
         updateMenu(currentMode);
-        printf("%d", currentMode);
         break;
       case BACK:
         currentMode--;
@@ -105,6 +105,8 @@ static void displayMenu() {
 
 static void displayPlayer() {
   werase(stdscr);
+//  mvwprintw(stdscr, , 0, "test");
+  mvwprintw(stdscr, centerY, centerX, "debug");
   refresh();
 }
 
@@ -117,6 +119,7 @@ static void updateMenu(int val) {
       displayPlayer();
       break;
     default:
+      currentMode--;
       break;
   }
 }

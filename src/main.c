@@ -5,9 +5,9 @@
 #include<ncurses.h>
 #include<SDL2/SDL.h>
 #include<SDL2/SDL_mixer.h>
-#include <sys/types.h>
-#include <sys/stat.h>
-#include <errno.h>
+#include<sys/types.h>
+#include<sys/stat.h>
+#include<errno.h>
 
 WINDOW *newWindow(int rows, int cols, int y, int x);
 static void endProgram();
@@ -16,10 +16,10 @@ static void clearBuf();
 static void displayFilechooser();
 static void fileLogic();
 static void updateMenu(int val);
-char *concat(const char *s1, const char *s2);
 
 char path[1024];
-char configFilepath[1024];
+char configFilepath[1024] = "";
+char musicDir[1024];
 
 struct winsize w;
 unsigned short centerX, centerY;
@@ -55,9 +55,6 @@ int main(int** argc, char argv[]) {
   SDL_Init(SDL_INIT_AUDIO);
   Mix_Music* music = NULL;
   Mix_OpenAudio(41000, MIX_DEFAULT_FORMAT, 2, 4096);
-  //music = Mix_LoadMUS("/home/mike/Downloads/hum.wav");   // TODO: Change file searching system
-
-  //Mix_PlayMusic(music, 0);
 
   int ch;
   
@@ -76,9 +73,6 @@ int main(int** argc, char argv[]) {
   }
 
   start_color();
-  //init_pair(1, COLOR_WHITE, COLOR_BLUE); // Fore and background colors
-  
-  //attron(COLOR_PAIR(1));
 
   if(SDL_Init(SDL_INIT_AUDIO) == -1) {
     printf("could not initalize SDL: %s. \n", SDL_GetError());
@@ -93,8 +87,6 @@ int main(int** argc, char argv[]) {
   displayMenu();
 
   fileLogic();
-
-  //attroff(COLOR_PAIR(1));
   
   do {
     ch = wgetch(stdscr);
@@ -183,19 +175,15 @@ static void displayFilechooser() {
 static void fileLogic() {
   char *homeDir = getenv("HOME");
   snprintf(path, sizeof(path), "%s/.config/musicritty/", homeDir);
-  //snprintf(configFilepath, sizeof(configFilepath), "%sconfig", *path); 
 
-  char tempConfigDir[1024];
+  char tempConfigDir[1024] = "";  // Empty string to avoid null-terminator issues
   char configFileName[1024] = "config";
 
   strcat(tempConfigDir, path); //TODO: this
+  strcat(tempConfigDir, configFileName);
+  strcat(configFilepath, tempConfigDir);
 
-//  printf(tempConfigDir);
-
-  //printf(path);
-  //printf(configFilepath);
-
-  //FILE *fptr = fopen(configFilepath, "r");
+  FILE *fptr = fopen(configFilepath, "r");
 
   if (mkdir(path, 
             S_IRWXU | 
@@ -205,11 +193,12 @@ static void fileLogic() {
       printf("Error: %s\n", strerror(errno));
   }
 
-  //if(fptr == NULL) {
-  //  fptr = fopen(configFilepath, "w"); 
-  //}
-  //fprintf(fptr, "test");
-  //fclose(fptr);
+  if(fptr == NULL) {
+    fptr = fopen(configFilepath, "w");
+    snprintf(musicDir, sizeof(musicDir), "%s/Music", homeDir);
+    fprintf(fptr, musicDir);
+  }
+  fclose(fptr);
 }
 
 static void updateMenu(int val) {
@@ -222,17 +211,8 @@ static void updateMenu(int val) {
       displayFilechooser();
       break;
     default:
-      currentMode--;
+      currentMode--;  // To prevent user from going to impossible menus
       break;
   }
 }
 
- char *concat(const char *s1, const char *s2) {
-    const size_t len1 = strlen(s1);
-    const size_t len2 = strlen(s2);
-    char *result = malloc(len1 + len2 + 1); // +1 for the null-terminator
-    // in real code you would check for errors in malloc here
-    memcpy(result, s1, len1);
-    memcpy(result + len1, s2, len2 + 1); // +1 to copy the null-terminator
-    return result;
-}

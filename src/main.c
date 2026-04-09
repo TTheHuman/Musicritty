@@ -12,10 +12,14 @@
 WINDOW *newWindow(int rows, int cols, int y, int x);
 static void endProgram();
 static void displayMenu();
-static void displayPlayer();
+static void clearBuf();
 static void displayFilechooser();
-static void playerLogic();
+static void fileLogic();
 static void updateMenu(int val);
+char *concat(const char *s1, const char *s2);
+
+char path[1024];
+char configFilepath[1024];
 
 struct winsize w;
 unsigned short centerX, centerY;
@@ -88,7 +92,7 @@ int main(int** argc, char argv[]) {
   currentMode = MENU;
   displayMenu();
 
-  playerLogic();
+  fileLogic();
 
   //attroff(COLOR_PAIR(1));
   
@@ -147,14 +151,26 @@ static void endProgram() {
 
 static void displayMenu() {
   werase(stdscr);
-  mvwprintw(stdscr, (centerY - TITLEOFFSETY), (centerX - TITLEOFFSETX), titleText);
-  mvwprintw(stdscr, (centerY - VERSIONOFFSETY), (centerX - VERSIONOFFSETX), versionText);
-  mvwprintw(stdscr, (centerY + QUITCUTOFFSETY), (centerX - QUITCUTOFFSETX), quitShortcutText);
-  mvwprintw(stdscr, (centerY + PLAYERCUTOFFSETY), (centerX - PLAYERCUTOFFSETX), playerShortcutText);
+  mvwprintw(stdscr, 
+           (centerY - TITLEOFFSETY), 
+           (centerX - TITLEOFFSETX), 
+           titleText);
+  mvwprintw(stdscr, 
+           (centerY - VERSIONOFFSETY), 
+           (centerX - VERSIONOFFSETX), 
+           versionText);
+  mvwprintw(stdscr, 
+           (centerY + QUITCUTOFFSETY), 
+           (centerX - QUITCUTOFFSETX), 
+           quitShortcutText);
+  mvwprintw(stdscr, 
+           (centerY + PLAYERCUTOFFSETY), 
+           (centerX - PLAYERCUTOFFSETX), 
+           playerShortcutText);
   refresh();
 }
 
-static void displayPlayer() {
+static void clearBuffer() {
   werase(stdscr);
   refresh();
 }
@@ -164,10 +180,36 @@ static void displayFilechooser() {
   refresh();
 }
 
-static void playerLogic() {
-//if (mkdir("~/.config/musicritty/", S_IRWXU | S_IRWXG | S_IRWXO) == -1) {
-//    printf("Error: %s\n", strerror(errno));
-//}
+static void fileLogic() {
+  char *homeDir = getenv("HOME");
+  snprintf(path, sizeof(path), "%s/.config/musicritty/", homeDir);
+  //snprintf(configFilepath, sizeof(configFilepath), "%sconfig", *path); 
+
+  char tempConfigDir[1024];
+  char configFileName[1024] = "config";
+
+  strcat(tempConfigDir, path); //TODO: this
+
+//  printf(tempConfigDir);
+
+  //printf(path);
+  //printf(configFilepath);
+
+  //FILE *fptr = fopen(configFilepath, "r");
+
+  if (mkdir(path, 
+            S_IRWXU | 
+            S_IRWXG | 
+            S_IRWXO) == -1 
+            && errno != EEXIST) {
+      printf("Error: %s\n", strerror(errno));
+  }
+
+  //if(fptr == NULL) {
+  //  fptr = fopen(configFilepath, "w"); 
+  //}
+  //fprintf(fptr, "test");
+  //fclose(fptr);
 }
 
 static void updateMenu(int val) {
@@ -176,7 +218,7 @@ static void updateMenu(int val) {
       displayMenu();
       break;
     case 2:
-      displayPlayer(); 
+      clearBuffer(); 
       displayFilechooser();
       break;
     default:
@@ -185,3 +227,12 @@ static void updateMenu(int val) {
   }
 }
 
+ char *concat(const char *s1, const char *s2) {
+    const size_t len1 = strlen(s1);
+    const size_t len2 = strlen(s2);
+    char *result = malloc(len1 + len2 + 1); // +1 for the null-terminator
+    // in real code you would check for errors in malloc here
+    memcpy(result, s1, len1);
+    memcpy(result + len1, s2, len2 + 1); // +1 to copy the null-terminator
+    return result;
+}

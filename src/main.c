@@ -1,5 +1,6 @@
 #define SDL_MAIN_HANDLED
 
+#include<dirent.h>
 #include<sys/ioctl.h>
 #include<stdio.h>
 #include<ncurses.h>
@@ -9,17 +10,22 @@
 #include<sys/stat.h>
 #include<errno.h>
 
-WINDOW *newWindow(int rows, int cols, int y, int x);
-static void endProgram();
-static void displayMenu();
-static void clearBuf();
-static void displayFilechooser();
-static void fileLogic();
-static void updateMenu(int val);
+typedef struct {
+  char *title;
+} song;
 
-char path[1024];
-char configFilepath[1024] = "";
-char musicDir[1024];
+typedef struct {
+  song list[5012];
+} queue;
+
+// ---- Frontend ---- //
+WINDOW *newWindow(int rows, int cols, int y, int x);
+static void updateMenu(int val);
+static void displayMenu();
+static void displayFilechooser();
+static void clearBuffer();
+static void destroyWindow(WINDOW *localWin);
+static void endProgram();
 
 struct winsize w;
 unsigned short centerX, centerY;
@@ -36,6 +42,18 @@ const char titleText[]          = "Welcome to Musicritty!";
 const char quitShortcutText[]   = "<S-q> to quit";
 const char versionText[]        = "vers. 0.1.0";
 const char playerShortcutText[] = "<S-e> to enter player";
+// ---- -------- ---- //
+
+// ---- Backend ---- //
+queue *initQueue(song songs[]);
+static void readConfig();
+static void loadMusicDir(song *_song);
+static void playFromQueue(Mix_Music *mus, queue *_queue);
+
+char path[1024];
+char configFilepath[1024] = "";
+char musicDir[1024];
+// --- ------- ---- //
 
 typedef enum {
   BACK     = 81,				     // Shift + q
@@ -86,8 +104,15 @@ int main(int** argc, char argv[]) {
   currentMode = MENU;
   displayMenu();
 
-  fileLogic();
-  
+  song *_song;
+
+  readConfig();
+  loadMusicDir(_song);
+
+  queue *musicQueue = initQueue(_song);
+
+  playFromQueue(music, musicQueue);
+
   do {
     ch = wgetch(stdscr);
     switch(ch) {
@@ -102,6 +127,7 @@ int main(int** argc, char argv[]) {
         break;
       case PLAY:
         if (currentMode == MENU) break;
+        playFromQueue(music, musicQueue);
         break;
       default:
         break;
@@ -120,6 +146,7 @@ int main(int** argc, char argv[]) {
     return 1;
 }
 
+// -------- Frontend -------- //
 WINDOW *newWindow(int rows, int cols, int y, int x) {
   WINDOW *localWin;
 
@@ -130,15 +157,19 @@ WINDOW *newWindow(int rows, int cols, int y, int x) {
   return localWin;
 }
 
-static void destroyWindow(WINDOW *localWin) {
-  wborder(localWin, ' ', ' ', ' ',' ',' ',' ',' ',' ');
-  
-  wrefresh(localWin);
-  delwin(localWin);
-}
-
-static void endProgram() {
-    endwin();
+static void updateMenu(int val) {
+  switch(val) {
+    case 1:
+      displayMenu();
+      break;
+    case 2:
+      clearBuffer(); 
+      displayFilechooser();
+      break;
+    default:
+      currentMode--;  // To prevent user from going to impossible menus
+      break;
+  }
 }
 
 static void displayMenu() {
@@ -162,24 +193,47 @@ static void displayMenu() {
   refresh();
 }
 
-static void clearBuffer() {
-  werase(stdscr);
-  refresh();
-}
-
 static void displayFilechooser() {
   WINDOW *filechooser = newWindow(centerY, centerX, 0, 0);
   refresh();
 }
 
-static void fileLogic() {
+static void clearBuffer() {
+  werase(stdscr);
+  refresh();
+}
+
+static void destroyWindow(WINDOW *localWin) {
+  wborder(localWin, ' ', ' ', ' ',' ',' ',' ',' ',' ');
+  
+  wrefresh(localWin);
+  delwin(localWin);
+}
+
+static void endProgram() {
+    endwin();
+}
+// -------- -------- -------- //
+
+// -------- Backend -------- //
+queue *initQueue(song songs[]) {
+  queue *_queue = malloc(sizeof(*_queue));
+  if(!_queue) { printf("malloc failed"); endwin(); }
+  for(int i = 0; i < (sizeof(*_queue->list) / sizeof(_queue->list[0])); i++) {
+    _queue->list[i] = songs[i];
+  }
+  return _queue;
+}
+
+static void readConfig() {
+  size_t bytesRead;
   char *homeDir = getenv("HOME");
-  snprintf(path, sizeof(path), "%s/.config/musicritty/", homeDir);
+  snprintf(path, sizeof(path), "%s/.config/musicritty/", homeDir); 
 
   char tempConfigDir[1024] = "";  // Empty string to avoid null-terminator issues
   char configFileName[1024] = "config";
 
-  strcat(tempConfigDir, path); //TODO: this
+  strcat(tempConfigDir, path);
   strcat(tempConfigDir, configFileName);
   strcat(configFilepath, tempConfigDir);
 
@@ -198,21 +252,32 @@ static void fileLogic() {
     snprintf(musicDir, sizeof(musicDir), "%s/Music", homeDir);
     fprintf(fptr, musicDir);
   }
+  while((bytesRead = fread(musicDir, 1, sizeof(musicDir) - 1, fptr)) > 0) {
+    musicDir[bytesRead] = '\0';
+  }
+  printf(musicDir);
   fclose(fptr);
 }
 
-static void updateMenu(int val) {
-  switch(val) {
-    case 1:
-      displayMenu();
-      break;
-    case 2:
-      clearBuffer(); 
-      displayFilechooser();
-      break;
-    default:
-      currentMode--;  // To prevent user from going to impossible menus
-      break;
+static void loadMusicDir(song *_song) {
+ struct dirent *de;
+
+ DIR *dir = opendir(musicDir);
+
+ if(dir == NULL) { printf("couldn't open current directory!"); endwin(); }
+
+  while((de = readdir(dir)) != NULL) {
+    _song->title = de->d_name;
   }
+  closedir(dir);
 }
+
+static void playFromQueue(Mix_Music *mus, queue *_queue) {
+  int index = 0;
+  char *p = _queue[index].list[index].title;
+  printf(p);
+  mus = Mix_LoadMUS(p);
+  Mix_PlayMusic(mus, 0);
+}
+// -------- ------- -------- //
 

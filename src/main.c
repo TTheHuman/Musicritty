@@ -45,9 +45,9 @@ const char playerShortcutText[] = "<S-e> to enter player";
 // ---- -------- ---- //
 
 // ---- Backend ---- //
-queue *initQueue(song songs[]);
+queue *initQueue(song *songs[]);
 static void readConfig();
-static void loadMusicDir(song *_song);
+static void loadMusicDir(song *_song[5012]);
 static void playFromQueue(Mix_Music *mus, queue *_queue);
 
 char path[1024];
@@ -102,16 +102,12 @@ int main(int** argc, char argv[]) {
   centerY = ((w.ws_row / 2));
 
   currentMode = MENU;
-  displayMenu();
-
-  song *_song;
+  displayMenu(); 
 
   readConfig();
-  loadMusicDir(_song);
+  //loadMusicDir(_song); 
 
-  queue *musicQueue = initQueue(_song);
-
-  playFromQueue(music, musicQueue);
+  //playFromQueue(music, musicQueue);
 
   do {
     ch = wgetch(stdscr);
@@ -127,7 +123,7 @@ int main(int** argc, char argv[]) {
         break;
       case PLAY:
         if (currentMode == MENU) break;
-        playFromQueue(music, musicQueue);
+        //playFromQueue(music, musicQueue);
         break;
       default:
         break;
@@ -216,11 +212,12 @@ static void endProgram() {
 // -------- -------- -------- //
 
 // -------- Backend -------- //
-queue *initQueue(song songs[]) {
-  queue *_queue = malloc(sizeof(*_queue));
+queue *initQueue(song *songs[]) {
+  queue *_queue = (queue *)malloc(sizeof(*_queue));
   if(!_queue) { printf("malloc failed"); endwin(); }
   for(int i = 0; i < (sizeof(*_queue->list) / sizeof(_queue->list[0])); i++) {
-    _queue->list[i] = songs[i];
+    _queue->list[i] = *songs[i];
+    printf("%s", songs[i]->title);
   }
   return _queue;
 }
@@ -254,20 +251,24 @@ static void readConfig() {
   }
   while((bytesRead = fread(musicDir, 1, sizeof(musicDir) - 1, fptr)) > 0) {
     musicDir[bytesRead] = '\0';
-  }
-  printf(musicDir);
+  } 
   fclose(fptr);
 }
 
-static void loadMusicDir(song *_song) {
- struct dirent *de;
+static void loadMusicDir(song *_song[5012]) {
+  struct dirent *de;
 
- DIR *dir = opendir(musicDir);
+  printf(musicDir);
 
- if(dir == NULL) { printf("couldn't open current directory!"); endwin(); }
+  DIR *dir = opendir(musicDir); // TODO: this doesn't work right now because *_song is a single type and you need to create a fucntion that will 
+                               // return an array of *song to then initalize the queue with
 
+  if(dir == NULL) { printf("couldn't open current directory!"); endwin(); }
+
+ // For loops are simply too easy for a guy like me....
   while((de = readdir(dir)) != NULL) {
-    _song->title = de->d_name;
+    //_song[0]->title = de->d_name;
+    printf("%s", "debug");
   }
   closedir(dir);
 }

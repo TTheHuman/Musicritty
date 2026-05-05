@@ -11,7 +11,7 @@
 #include<errno.h>
 
 typedef struct {
-  char *title;
+  char title[256];
 } song;
 
 typedef struct {
@@ -47,7 +47,8 @@ const char playerShortcutText[] = "<S-e> to enter player";
 // ---- Backend ---- //
 queue *initQueue(song *songs[]);
 static void readConfig();
-static void loadMusicDir(song *_song[5012]);
+int getEntriesInDirectory();
+song *loadMusic(char path[]);
 static void playFromQueue(Mix_Music *mus, queue *_queue);
 
 char path[1024];
@@ -104,8 +105,12 @@ int main(int** argc, char argv[]) {
   currentMode = MENU;
   displayMenu(); 
 
+  //song *songs[1];
+
   readConfig();
-  //loadMusicDir(_song); 
+ 
+  song *songs[] = loadMusic(path);
+  free(songs);
 
   //playFromQueue(music, musicQueue);
 
@@ -255,22 +260,40 @@ static void readConfig() {
   fclose(fptr);
 }
 
-static void loadMusicDir(song *_song[5012]) {
+int getEntriesInDirectory() {
+  struct dirent *de;
+  DIR *dir = opendir(musicDir);
+  int i = 0;
+  while((de = readdir(dir)) != NULL) { i++; }
+  closedir(dir);
+  return i;
+}
+
+song *loadMusic(char path[]) {
   struct dirent *de;
 
-  printf(musicDir);
+  DIR *dir = opendir(path); // TODO: fix
 
-  DIR *dir = opendir(musicDir); // TODO: this doesn't work right now because *_song is a single type and you need to create a fucntion that will 
-                               // return an array of *song to then initalize the queue with
+  if(dir == NULL) { printf("couldn't open directory!"); endwin(); }
 
-  if(dir == NULL) { printf("couldn't open current directory!"); endwin(); }
+  song *_song[getEntriesInDirectory()];
 
+  for(int i = 0; i < sizeof(*_song) / sizeof(_song[0]); i++) {
+    _song[i] = malloc(sizeof(song));
+  }
+
+  int i = 0;
  // For loops are simply too easy for a guy like me....
   while((de = readdir(dir)) != NULL) {
-    //_song[0]->title = de->d_name;
-    printf("%s", "debug");
+    if(strcmp(de->d_name, ".") == 0 || strcmp(de->d_name, "..") == 0) continue;
+    strcpy(_song[i]->title, de->d_name); 
+    //free(_song[i]->title);
+    printf(_song[i]->title);
+    printf("%d", i);
+    i++;
   }
   closedir(dir);
+  return *_song;
 }
 
 static void playFromQueue(Mix_Music *mus, queue *_queue) {

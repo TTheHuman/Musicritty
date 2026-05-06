@@ -1,2 +1,2 @@
 main: main.c
-	cc -o ~/Documents/CodeProjects/c/Musicritty/bin/musicritty main.c -lncurses -lSDL2 -lSDL2_mixer
+	cc -o ~/Documents/CodeProjects/c/Musicritty/bin/musicritty main.c -lncurses -lSDL2 -lSDL2_mixer -llua5.3

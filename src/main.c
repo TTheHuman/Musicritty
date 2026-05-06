@@ -9,6 +9,10 @@
 #include<sys/types.h>
 #include<sys/stat.h>
 #include<errno.h>
+#include<lua5.3/lua.h>
+#include<lua5.3/lualib.h>
+#include<lua5.3/lauxlib.h>
+#include<unistd.h>
 
 typedef struct {
   char title[256];
@@ -71,6 +75,8 @@ typedef enum {
 modes currentMode;
 
 int main(int** argc, char argv[]) {
+  lua_State *L = luaL_newstate();
+  luaL_openlibs(L);
   SDL_Init(SDL_INIT_AUDIO);
   Mix_Music* music = NULL;
   Mix_OpenAudio(41000, MIX_DEFAULT_FORMAT, 2, 4096);
@@ -108,9 +114,24 @@ int main(int** argc, char argv[]) {
   //song *songs[1];
 
   readConfig();
- 
-  song *songs[] = loadMusic(path);
-  free(songs);
+
+   if (luaL_dofile(L, 
+        "/home/mike/Documents/CodeProjects/c/Musicritty/src/string.lua"
+        ) != 0) { // TODO: automate
+      const char* error = lua_tostring(L, -1);
+      fprintf(stderr, "Error: %s\n", error);
+      lua_pop(L, 1); // Remove error message from stack
+  } 
+
+  lua_getglobal(L, "test");
+  if(lua_isfunction(L, -1)) {
+    if(lua_pcall(L, 0, 1, 0) == LUA_OK) { // pcall calls func btw
+      lua_pop(L, lua_gettop(L));
+    } 
+  } 
+
+  //song *songs[] = loadMusic(path);
+  //free(songs);
 
   //playFromQueue(music, musicQueue);
 
@@ -135,14 +156,16 @@ int main(int** argc, char argv[]) {
     }
   }while(true);
 
-  exit:
+  exit: 
     Mix_FreeMusic(music);
     Mix_CloseAudio();
     SDL_Quit();
     endwin();
+    lua_close(L);
     return 0;
   exitError:
     endwin();
+    lua_close(L);
     printf("Unknown error");
     return 1;
 }

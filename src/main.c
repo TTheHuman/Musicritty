@@ -49,6 +49,8 @@ const char playerShortcutText[] = "<S-e> to enter player";
 // ---- -------- ---- //
 
 // ---- Backend ---- //
+static void luaLoadandRun(lua_State *state, char file[32]);
+char *getSourceDir();
 queue *initQueue(song *songs[]);
 static void readConfig();
 int getEntriesInDirectory();
@@ -115,20 +117,21 @@ int main(int** argc, char argv[]) {
 
   readConfig();
 
-   if (luaL_dofile(L, 
-        "/home/mike/Documents/CodeProjects/c/Musicritty/src/string.lua"
-        ) != 0) { // TODO: automate
-      const char* error = lua_tostring(L, -1);
-      fprintf(stderr, "Error: %s\n", error);
-      lua_pop(L, 1); // Remove error message from stack
-  } 
+
+  if (luaL_dofile(L, 
+      "/home/mike/Documents/CodeProjects/c/Musicritty/src/string.lua"
+      ) != 0) { // DO: automate, see *getSourceDir()
+    const char* error = lua_tostring(L, -1);
+    fprintf(stderr, "Error: %s\n", error);
+    lua_pop(L, 1); // Remove error message from stack
+}
 
   lua_getglobal(L, "test");
   if(lua_isfunction(L, -1)) {
     if(lua_pcall(L, 0, 1, 0) == LUA_OK) { // pcall calls func btw
       lua_pop(L, lua_gettop(L));
     } 
-  } 
+   }  
 
   //song *songs[] = loadMusic(path);
   //free(songs);
@@ -156,7 +159,7 @@ int main(int** argc, char argv[]) {
     }
   }while(true);
 
-  exit: 
+  exit:
     Mix_FreeMusic(music);
     Mix_CloseAudio();
     SDL_Quit();
@@ -240,6 +243,22 @@ static void endProgram() {
 // -------- -------- -------- //
 
 // -------- Backend -------- //
+static void luaRunFunc(lua_State *state, char *func) {
+  //TODO: this 
+}
+
+static void luaLoadandRun(lua_State *state, char file[32]) {
+}
+
+char *getSourceDir() {
+  // TODO: probably implement in C instad of lua
+  return "/home/mike/Documents/CodeProjects/c/Musicritty/src/";
+}
+
+// TODO: dynamic arg input for function parameters
+// An array of unknown size (and type maybe?) holding the values to push to the lua stack
+// malloc() the array, push the value, and THEN free the emory.
+
 queue *initQueue(song *songs[]) {
   queue *_queue = (queue *)malloc(sizeof(*_queue));
   if(!_queue) { printf("malloc failed"); endwin(); }

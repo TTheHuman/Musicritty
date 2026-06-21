@@ -1,2 +1,2 @@
 main: main.c
-	cc -o ~/Documents/CodeProjects/c/Musicritty/bin/musicritty main.c -lncurses
+	cc -o ~/Musicritty/bin/musicritty main.c -lncurses
